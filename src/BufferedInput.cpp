@@ -11,47 +11,6 @@
 
 namespace raylib {
 
-	ButtonAction Action::button(Button button, bool combo /*= false*/) {
-		return ButtonAction::button(button, combo);
-	}
-
-	ButtonAction Action::key(KeyboardKey key, bool combo /*= false*/) { return ButtonAction::key(key, combo); }
-	ButtonAction Action::mouse_button(MouseButton b, bool combo /*= false*/) {return ButtonAction::mouse_button(b, combo); }
-	ButtonAction Action::pad(GamepadButton b, int gamepad /*= 0*/, bool combo /*= false*/) { return ButtonAction::pad(b, gamepad, combo); }
-	ButtonAction Action::joy(GamepadButton b, int gamepad /*= 0*/, bool combo /*= false*/) { return ButtonAction::joy(b, gamepad, combo); }
-	ButtonAction Action::gamepad_button(GamepadButton b, int gamepad /*= 0*/, bool combo /*= false*/) { return ButtonAction::gamepad_button(b, gamepad, combo); }
-
-	ButtonAction Action::button_set(ButtonSet buttons /*= {}*/, bool combo /*= false*/) {
-		return ButtonAction::set(buttons, combo);
-	}
-
-	AxisAction Action::gamepad_axis(GamepadAxis axis /*= GAMEPAD_AXIS_LEFT_X*/, int gamepad /*= 0*/) {
-		return AxisAction::gamepad_axis(axis, gamepad);
-	}
-
-	AxisAction Action::mouse_wheel() { return AxisAction::mouse_wheel(); }
-
-	VectorAction Action::mouse_wheel_vector() { return VectorAction::mouse_wheel(); }
-
-	VectorAction Action::mouse_position() { return VectorAction::mouse_position(); }
-
-	VectorAction Action::gamepad_axes(
-		GamepadAxis horizontal /*= GAMEPAD_AXIS_LEFT_X*/,
-		GamepadAxis vertical /*= GAMEPAD_AXIS_LEFT_Y*/,
-		int gamepadHorizontal /*= 0*/,
-		int gamepadVertical /*= -1*/
-	) {
-		return VectorAction::gamepad_axes(horizontal, vertical, gamepadHorizontal, gamepadVertical);
-	}
-
-	MultiButtonsAction Action::quad_buttons(ButtonSet up, ButtonSet down, ButtonSet left, ButtonSet right, bool normalized /*= true*/) {
-		return MultiButtonsAction::quad(up, down, left, right, normalized);
-	}
-	MultiButtonsAction Action::wasd(ButtonSet up, ButtonSet left, ButtonSet down, ButtonSet right, bool normalized /*= true*/)
-	{ return MultiButtonsAction::quad(up, down, left, right, normalized); }
-	MultiButtonsAction Action::wasd(bool normalized /*= true*/)
-	{ return MultiButtonsAction::quad({Button::key(KEY_W), Button::key(KEY_UP)}, {Button::key(KEY_S), Button::key(KEY_DOWN)}, {Button::key(KEY_A), Button::key(KEY_LEFT)}, {Button::key(KEY_D), Button::key(KEY_RIGHT)}, normalized); }
-
 	bool Button::operator<(const Button& o) const {
 		if (type != o.type) return type < o.type;
 		if (type == Type::Gamepad && gamepad.id == o.gamepad.id)
@@ -80,119 +39,106 @@ namespace raylib {
 		return state;
 	}
 
-	ButtonAction& ButtonAction::set_callback(is::signals::signal<void(const std::string_view name, uint8_t state, bool wasPressed)>::slot_type callback) {
-		this->callback.disconnect_all_slots();
-		this->callback.connect(callback);
+	Action& Action::operator=(Action&& o) {
+		type = o.type;
+		data = std::move(o.data);
+		callback = std::move(o.callback);
+		if(o.type == Type::Button) data.button.buttons = std::exchange(o.data.button.buttons, nullptr);
+		else if(o.type == Type::MultiButton) data.multi.quadButtons = std::exchange(o.data.multi.quadButtons, nullptr);
 		return *this;
 	}
 
-	void ButtonAction::Pump(std::string_view name) {
-		uint8_t state = Button::IsSetPressed(buttons);
-		if (state != last_state) {
-			if(combo) {
-				if(bool comboState = state == buttons.size(), lastComboState = last_state == buttons.size(); comboState != lastComboState)
-					callback(name, comboState, lastComboState);
-			} else callback(name, state, last_state);
-			last_state = state;
+	void Action::pump_button(std::string_view name) {
+		assert(data.button.buttons);
+		uint8_t state = Button::IsSetPressed(*data.button.buttons);
+		if (state != data.button.last_state) {
+			if(data.button.combo) {
+				if(bool comboState = state == data.button.buttons->size(), lastComboState = data.button.last_state == data.button.buttons->size(); comboState != lastComboState)
+					callback(name, {(float)comboState}, {(float)lastComboState});
+			} else callback(name, {(float)state}, {(float)data.button.last_state});
+			data.button.last_state = state;
 		}
 	}
 
-	AxisAction& AxisAction::set_callback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
-		this->callback.disconnect_all_slots();
-		this->callback.connect(callback);
-		return *this;
-	}
-
-	void AxisAction::Pump(std::string_view name) {
-		float state = last_state;
-		switch(axis) {
-		break; case Type::Gamepad: {
-			float movement = GetGamepadAxisMovement(gamepad.id, gamepad.axis);
+	void Action::pump_axis(std::string_view name) {
+		float state = data.axis.last_state;
+		switch(data.axis.type) {
+		break; case Data::Axis::Type::Gamepad: {
+			float movement = GetGamepadAxisMovement(data.axis.gamepad.id, data.axis.gamepad.axis);
 			if(movement != 0) state += movement;
 		}
-		break; case Type::MouseWheel: {
+		break; case Data::Axis::Type::MouseWheel: {
 			float movement = GetMouseWheelMove();
 			if(movement != 0) state += movement;
 		}
-		break; default: assert(axis != Type::Invalid);
+		break; default: assert(data.axis.type != Data::Axis::Type::Invalid);
 		}
-		if (state != last_state) {
-			callback(name, state, state - last_state);
-			last_state = state;
+		if (state != data.axis.last_state) {
+			callback(name, {state}, {state - data.axis.last_state});
+			data.axis.last_state = state;
 		}
 	}
 
-	VectorAction& VectorAction::set_callback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
-		this->callback.disconnect_all_slots();
-		this->callback.connect(callback);
-		return *this;
-	}
-
-	void VectorAction::Pump(std::string_view name) {
-		Vector2 state = last_state;
-		switch(vector) {
-		break; case Type::MouseWheel:
+	void Action::pump_vector(std::string_view name) {
+		Vector2 state = data.vector.last_state;
+		switch(data.vector.type) {
+		break; case Data::Vector::Type::MouseWheel:
 			state = GetMouseWheelMoveV();
-		break; case Type::MousePosition:
+		break; case Data::Vector::Type::MousePosition:
 			state = GetMousePosition();
 		// break; case Type::MouseDelta:
 		//     state = GetMouseDelta();
-		break; case Type::GamepadAxes: {
-			state.x += GetGamepadAxisMovement(gamepad.horizontal.id, gamepad.horizontal.axis);
-			state.y += GetGamepadAxisMovement(gamepad.vertical.id, gamepad.vertical.axis);
+		break; case Data::Vector::Type::GamepadAxes: {
+			state.x += GetGamepadAxisMovement(data.vector.gamepad.horizontal.id, data.vector.gamepad.horizontal.axis);
+			state.y += GetGamepadAxisMovement(data.vector.gamepad.vertical.id, data.vector.gamepad.vertical.axis);
 		}
-		break; default: assert(vector != Type::Invalid);
+		break; default: assert(data.vector.type != Data::Vector::Type::Invalid);
 		}
-		if (!Vector2Equals(state, last_state)) {
-			callback(name, state, Vector2Subtract(state, last_state));
-			last_state = state;
+		if (!Vector2Equals(state, data.vector.last_state)) {
+			callback(name, state, Vector2Subtract(state, data.vector.last_state));
+			data.vector.last_state = state;
 		}
 	}
 
-	VectorAction VectorAction::gamepad_axes(GamepadAxis horizontal /*= GAMEPAD_AXIS_LEFT_X*/, GamepadAxis vertical /*= GAMEPAD_AXIS_LEFT_Y*/, int gamepadHorizontal /*= 0*/, int gamepadVertical /*= -1*/) {
+	Action Action::gamepad_axes(GamepadAxis horizontal /*= GAMEPAD_AXIS_LEFT_X*/, GamepadAxis vertical /*= GAMEPAD_AXIS_LEFT_Y*/, int gamepadHorizontal /*= 0*/, int gamepadVertical /*= -1*/) {
 		if(gamepadVertical < 0) gamepadVertical = gamepadHorizontal;
 
-		VectorAction out = {Action::Type::Vector, VectorAction::Type::GamepadAxes};
-		out.gamepad = {{gamepadHorizontal, horizontal}, {gamepadVertical, vertical}};
+		Action out = {Action::Type::Vector, {.vector = { Data::Vector::Type::GamepadAxes}}};
+		out.data.vector.gamepad = {{gamepadHorizontal, horizontal}, {gamepadVertical, vertical}};
 		return out;
 	}
 
-	MultiButtonsAction& MultiButtonsAction::set_callback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
-		this->callback.disconnect_all_slots();
-		this->callback.connect(callback);
-		return *this;
-	}
-
-	void MultiButtonsAction::Pump(std::string_view name) {
-		Vector2 state = last_state;{
+	void Action::pump_multi_button(std::string_view name) {
+		Vector2 state = data.multi.last_state;
+		{
 			std::array<uint8_t, 4> buttonState;
 			for(uint8_t i = 0; i < 4; i++) {
-				buttonState[i] = Button::IsSetPressed(quadButtons.directions[i]);
-				if(quadButtons.normalize && buttonState[i] > 0)
+				buttonState[i] = Button::IsSetPressed(data.multi.quadButtons->directions[i]);
+				if(data.multi.quadButtons->normalize && buttonState[i] > 0)
 					buttonState[i] = 1;
 			}
-			state.x = buttonState[ButtonData<4>::Direction::Left] - buttonState[ButtonData<4>::Direction::Right];
-			state.y = buttonState[ButtonData<4>::Direction::Up] - buttonState[ButtonData<4>::Direction::Down];
+			state.x = buttonState[MultiButtonData<4>::Direction::Left] - buttonState[MultiButtonData<4>::Direction::Right];
+			state.y = buttonState[MultiButtonData<4>::Direction::Up] - buttonState[MultiButtonData<4>::Direction::Down];
 		}
-		if (!Vector2Equals(state, last_state)) {
-			callback(name, state, Vector2Subtract(state, last_state));
-			last_state = state;
+		if (!Vector2Equals(state, data.multi.last_state)) {
+			callback(name, state, Vector2Subtract(state, data.multi.last_state));
+			data.multi.last_state = state;
 		}
 	}
 
 	void BufferedInput::PumpMessages(bool whileUnfocused /*= false*/) {
 		if(!whileUnfocused && !IsWindowFocused()) return;
 		for(auto& [name, action]: actions) {
-			switch(action->type){
+			switch(action.type){
 			break; case Action::Type::Button:
-				action->as<ButtonAction>().Pump(name);
+				action.pump_button(name);
 			break; case Action::Type::Axis:
-				action->as<AxisAction>().Pump(name);
+				action.pump_axis(name);
 			break; case Action::Type::Vector:
-				action->as<VectorAction>().Pump(name);
+				action.pump_vector(name);
 			break; case Action::Type::MultiButton:
-				action->as<MultiButtonsAction>().Pump(name);
-			break; default: assert(action->type != Action::Type::Invalid);
+				action.pump_multi_button(name);
+			break; default: assert(action.type != Action::Type::Invalid);
 			}
 		}
 	}

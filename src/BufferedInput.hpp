@@ -31,46 +31,6 @@ namespace raylib {
 		Delegate& operator=(callback_type callback) { set(callback); return *this; }
 	};
 
-	struct Button;
-	struct ButtonAction;
-	struct AxisAction;
-	struct VectorAction;
-	struct MultiButtonsAction;
-
-	using ButtonSet = std::set<Button>;
-
-	struct Action {
-		enum class Type {
-			Invalid = 0,
-			Button,
-			Axis,
-			Vector,
-			MultiButton
-		} type;
-
-		template<typename T>
-		T& as() {
-			static_assert(std::is_base_of_v<Action, T>, "as can only be used to cast to action types!");
-			return *reinterpret_cast<T*>(this);
-		}
-
-		static ButtonAction button(Button button, bool combo = false);
-		static ButtonAction key(KeyboardKey key, bool combo = false);
-		static ButtonAction mouse_button(MouseButton b, bool combo = false);
-		static ButtonAction pad(GamepadButton b, int gamepad = 0, bool combo = false);
-		static ButtonAction joy(GamepadButton b, int gamepad = 0, bool combo = false);
-		static ButtonAction gamepad_button(GamepadButton b, int gamepad = 0, bool combo = false);
-		static ButtonAction button_set(ButtonSet buttons = {}, bool combo = false);
-		static AxisAction gamepad_axis(GamepadAxis axis = GAMEPAD_AXIS_LEFT_X, int gamepad = 0);
-		static AxisAction mouse_wheel();
-		static VectorAction mouse_wheel_vector();
-		static VectorAction mouse_position();
-		static VectorAction gamepad_axes(GamepadAxis horizontal = GAMEPAD_AXIS_LEFT_X, GamepadAxis vertical = GAMEPAD_AXIS_LEFT_Y, int gamepadHorizontal = 0, int gamepadVertical = -1);
-		static MultiButtonsAction quad_buttons(ButtonSet up, ButtonSet down, ButtonSet left, ButtonSet right, bool normalized = true);
-		static MultiButtonsAction wasd(ButtonSet up, ButtonSet left, ButtonSet down, ButtonSet right, bool normalized = true);
-		static MultiButtonsAction wasd(bool normalized = true);
-	};
-
 	struct Button {
 		enum class Type {
 			Invalid = 0,
@@ -102,117 +62,30 @@ namespace raylib {
 		static uint8_t IsSetPressed(const std::set<Button>& buttons);
 	};
 
-	struct ButtonAction: public Action {
-		ButtonSet buttons;
-		bool combo = false; // When true all buttons in the set must be pressed for the action to trigger
-		uint8_t last_state = 0;
-		Delegate<void(const std::string_view name, uint8_t state, bool wasPressed)> callback;
+	using ButtonSet = std::set<Button>;
 
-		ButtonAction& set_callback(is::signals::signal<void(const std::string_view name, uint8_t state, bool wasPressed)>::slot_type callback);
-
-		// NOTE: After calling this function "this" will have been moved into the pointer and shouldn't be accessed anymore!
-		std::unique_ptr<Action> make_unique() {
-			return std::make_unique<ButtonAction>(std::move(*this));
-		}
-
-		void Pump(std::string_view name);
-
-		static ButtonAction button(Button button = {Button::Type::Mouse, {.mouse = MOUSE_BUTTON_LEFT}}, bool combo = false) {
-			return {Action::Type::Button, {button}, combo};
-		}
-
-		static ButtonAction key(KeyboardKey key, bool combo = false) { return button({ Button::Type::Keyboard, key}, combo); }
-		static ButtonAction btn(MouseButton b, bool combo = false) { return button({ Button::Type::Mouse, {.mouse = b}}, combo); }
-		static ButtonAction mouse_button(MouseButton b, bool combo = false) { return btn(b, combo); }
-		static ButtonAction pad(GamepadButton b, int gamepad = 0, bool combo = false) { return button({ Button::Type::Keyboard, {.gamepad = {gamepad, b}}}, combo); }
-		static ButtonAction joy(GamepadButton b, int gamepad = 0, bool combo = false) { return pad(b, gamepad, combo); }
-		static ButtonAction gamepad_button(GamepadButton b, int gamepad = 0, bool combo = false) { return pad(b, gamepad, combo); }
-
-		static ButtonAction set(ButtonSet buttons = {}, bool combo = false) {
-			return {Action::Type::Button, buttons, combo};
-		}
-	};
-
-	struct AxisAction: public Action {
+	struct Action {
 		enum class Type {
 			Invalid = 0,
-			Gamepad,
-			MouseWheel
-		} axis;
+			Button,
+			Axis,
+			Vector,
+			MultiButton
+		} type;
+
+		template<typename T>
+		T& as() {
+			static_assert(std::is_base_of_v<Action, T>, "as can only be used to cast to action types!");
+			return *reinterpret_cast<T*>(this);
+		}
 
 		struct Gamepad {
 			int id;
 			GamepadAxis axis;
 		};
 
-		union {
-			Gamepad gamepad;
-		};
-		float last_state = 0;
-		Delegate<void(const std::string_view name, float state, float delta)> callback;
-
-		AxisAction& set_callback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback);
-
-		// NOTE: After calling this function "this" will have been moved into the pointer and shouldn't be accessed anymore!
-		std::unique_ptr<Action> make_unique() {
-			return std::make_unique<AxisAction>(std::move(*this));
-		}
-
-		void Pump(std::string_view name);
-
-		static AxisAction gamepad_axis(GamepadAxis axis = GAMEPAD_AXIS_LEFT_X, int gamepad = 0) {
-			AxisAction a = {Action::Type::Axis, AxisAction::Type::MouseWheel};
-			a.gamepad = {gamepad, axis};
-			return a;
-		}
-
-		static AxisAction mouse_wheel() {
-			return {Action::Type::Axis, AxisAction::Type::MouseWheel};
-		}
-	};
-
-	struct VectorAction: public Action {
-		enum class Type {
-			Invalid = 0,
-			MouseWheel,
-			MousePosition,
-			// MouseDelta,
-			GamepadAxes,
-			// QuadButtons,
-		} vector;
-
-		union {
-			struct {
-				AxisAction::Gamepad horizontal;
-				AxisAction::Gamepad vertical;
-			} gamepad;
-		};
-		Vector2 last_state = { 0, 0};
-		Delegate<void(const std::string_view name, Vector2 state, Vector2 delta)> callback;
-
-		VectorAction& set_callback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback);
-
-		// NOTE: After calling this function "this" will have been moved into the pointer and shouldn't be accessed anymore!
-		std::unique_ptr<Action> make_unique() {
-			return std::make_unique<VectorAction>(std::move(*this));
-		}
-
-		void Pump(std::string_view name);
-
-		static VectorAction mouse_wheel() {
-			return {Action::Type::Vector, VectorAction::Type::MouseWheel};
-		}
-
-		static VectorAction mouse_position() {
-			return {Action::Type::Vector, VectorAction::Type::MousePosition};
-		}
-
-		static VectorAction gamepad_axes(GamepadAxis horizontal = GAMEPAD_AXIS_LEFT_X, GamepadAxis vertical = GAMEPAD_AXIS_LEFT_Y, int gamepadHorizontal = 0, int gamepadVertical = -1);
-	};
-
-	struct MultiButtonsAction: public Action {
 		template<size_t N>
-		struct ButtonData {
+		struct MultiButtonData {
 			enum Direction {
 				Up, Down, Left, Right,
 				UpLeft, UpRight, DownLeft, DownRight
@@ -222,48 +95,128 @@ namespace raylib {
 			bool normalize = true; // When true the maximum value returned for a given axis is 1, if false the value of each direction will be the sum of the buttons pressed pointing one direction minus the sum of the pressed buttons pointing the other direction
 		};
 
-		ButtonData<4> quadButtons;
-		Vector2 last_state;
+		union Data {
+			struct Button {
+				ButtonSet* buttons;
+				bool combo = false; // When true all buttons in the set must be pressed for the action to trigger
+				uint8_t last_state = 0;
+			} button;
+
+			struct Axis {
+				enum class Type {
+					Invalid = 0,
+					Gamepad,
+					MouseWheel
+				} type;
+
+				Gamepad gamepad;
+				float last_state = 0;
+			} axis;
+
+			struct Vector {
+				enum class Type {
+					Invalid = 0,
+					MouseWheel,
+					MousePosition,
+					// MouseDelta,
+					GamepadAxes,
+					// QuadButtons,
+				} type;
+
+				struct GamepadAxes{
+					Gamepad horizontal;
+					Gamepad vertical;
+				} gamepad;
+				Vector2 last_state = { 0, 0 };
+			} vector;
+
+			struct MultiButton {
+				MultiButtonData<4>* quadButtons;
+				Vector2 last_state;
+			} multi;
+		} data; 
+
+		// Delegate<void(const std::string_view name, uint8_t state, bool wasPressed)> callback;
+		// Delegate<void(const std::string_view name, float state, float delta)> callback;
 		Delegate<void(const std::string_view name, Vector2 state, Vector2 delta)> callback;
 
-		MultiButtonsAction& set_callback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback);
+		Action() : type(Type::Invalid), data({.button = {}}) {}
+		~Action() {
+			if(type == Type::Button && data.button.buttons) delete data.button.buttons;
+			else if(type == Type::MultiButton && data.multi.quadButtons) delete data.multi.quadButtons;
+		}
+		Action(Type t, Data d = {.button = {nullptr, false, 0}}) : type(t), data(d) {}
+		Action(const Action&) = delete;
+		Action(Action&& o) : Action() { *this = std::move(o); } 
+		Action& operator=(const Action&) = delete;
+		Action& operator=(Action&& o);
 
-		// NOTE: After calling this function "this" will have been moved into the pointer and shouldn't be accessed anymore!
-		std::unique_ptr<Action> make_unique() {
-			return std::make_unique<MultiButtonsAction>(std::move(*this));
+		Action& add_callback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
+			this->callback.connect(callback);
+			return *this;
+		}
+		Action& set_callback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
+			this->callback.disconnect_all_slots();
+			return add_callback(callback);
 		}
 
-		void Pump(std::string_view name);
+		Action& add_callback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+			return add_callback([callback](const std::string_view name, Vector2 state, Vector2 delta) {
+				callback(name, state.x, delta.x);
+			});
+		}
+		Action& set_callback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+			this->callback.disconnect_all_slots();
+			return add_callback(callback);
+		}
 
-		static MultiButtonsAction quad(ButtonSet up, ButtonSet down, ButtonSet left, ButtonSet right, bool normalized = true) {
-			MultiButtonsAction out{Action::Type::MultiButton};
-			out.quadButtons = {{ up, down, left, right }, {}, normalized};
+		static Action button(Button button, bool combo = false) { return Action{Action::Type::Button, Action::Data{ .button = {new ButtonSet{button}, combo}}}; }
+		static Action key(KeyboardKey key, bool combo = false) { return button({ Button::Type::Keyboard, key}, combo); }
+		static Action mouse_button(MouseButton b, bool combo = false) { return button({ Button::Type::Mouse, {.mouse = b}}, combo); }
+		static Action pad(GamepadButton b, int gamepad = 0, bool combo = false) { return button({ Button::Type::Keyboard, {.gamepad = {gamepad, b}}}, combo); }
+		static Action joy(GamepadButton b, int gamepad = 0, bool combo = false) { return pad(b, gamepad, combo); }
+		static Action gamepad_button(GamepadButton b, int gamepad = 0, bool combo = false) { return pad(b, gamepad, combo); }
+		static Action button_set(ButtonSet buttons = {}, bool combo = false) { return Action{Action::Type::Button, Action::Data{ .button = { new ButtonSet(buttons), combo }}}; }
+		static Action gamepad_axis(GamepadAxis axis = GAMEPAD_AXIS_LEFT_X, int gamepad = 0) {
+			return {Action::Type::Axis, {.axis = {Data::Axis::Type::Gamepad, {gamepad, axis}}}};
+		}
+		static Action mouse_wheel() {
+			return {Action::Type::Axis, {.axis = { Data::Axis::Type::MouseWheel }}};
+		}
+		static Action mouse_wheel_vectoe() {
+			return {Action::Type::Vector, {.vector = { Data::Vector::Type::MouseWheel }}};
+		}
+		static Action mouse_position() {
+			return {Action::Type::Vector, {.vector = { Data::Vector::Type::MousePosition }}};
+		}
+		static Action gamepad_axes(GamepadAxis horizontal = GAMEPAD_AXIS_LEFT_X, GamepadAxis vertical = GAMEPAD_AXIS_LEFT_Y, int gamepadHorizontal = 0, int gamepadVertical = -1);
+		static Action quad(ButtonSet up, ButtonSet down, ButtonSet left, ButtonSet right, bool normalized = true) {
+			Action out{Action::Type::MultiButton};
+			out.data.multi.quadButtons = new MultiButtonData<4>{{ up, down, left, right }, {}, normalized};
 			return out;
 		}
-		static MultiButtonsAction wasd(
+		static Action wasd(
 			ButtonSet up = {Button::key(KEY_W), Button::key(KEY_UP)},
 			ButtonSet left = {Button::key(KEY_A), Button::key(KEY_LEFT)},
 			ButtonSet down = {Button::key(KEY_S), Button::key(KEY_DOWN)},
 			ButtonSet right = {Button::key(KEY_D), Button::key(KEY_RIGHT)},
 			bool normalized = true
 		) { return quad(up, down, left, right, normalized); }
+
+		void pump_button(std::string_view name);
+		void pump_axis(std::string_view name);
+		void pump_vector(std::string_view name);
+		void pump_multi_button(std::string_view name);
+
+		// NOTE: After calling this function "this" will have been moved into the reciever and shouldn't be accessed anymore!
+		Action&& move() { return std::move(*this); }
 	};
 
 
 	struct BufferedInput {
-		std::map<std::string, std::unique_ptr<Action>> actions;
+		std::map<std::string, Action> actions;
 
 		void PumpMessages(bool whileUnfocused = false);
-
-		// void SetExitAction(std::unique_ptr<ButtonAction>&& action) {
-		// 	SetExitKey(KEY_NULL);
-
-		// 	action->set_callback([](const std::string_view, uint8_t pressed, bool wasPressed){
-		// 		if(pressed) CloseWindow();
-		// 	});
-		// 	actions["exit"] = std::move(action);
-		// }
-		// void SetExitAction(ButtonAction&& action) { SetExitAction(std::make_unique<ButtonAction>(std::move(action))); }
 	};
 
 }
