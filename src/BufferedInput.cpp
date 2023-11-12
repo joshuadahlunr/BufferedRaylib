@@ -48,7 +48,7 @@ namespace raylib {
 		return *this;
 	}
 
-	void Action::pump_button(std::string_view name) {
+	void Action::PumpButton(std::string_view name) {
 		assert(data.button.buttons);
 		uint8_t state = Button::IsSetPressed(*data.button.buttons);
 		if (state != data.button.last_state) {
@@ -60,7 +60,7 @@ namespace raylib {
 		}
 	}
 
-	void Action::pump_axis(std::string_view name) {
+	void Action::PumpAxis(std::string_view name) {
 		float state = data.axis.last_state;
 		switch(data.axis.type) {
 		break; case Data::Axis::Type::Gamepad: {
@@ -79,7 +79,7 @@ namespace raylib {
 		}
 	}
 
-	void Action::pump_vector(std::string_view name) {
+	void Action::PumpVector(std::string_view name) {
 		Vector2 state = data.vector.last_state;
 		switch(data.vector.type) {
 		break; case Data::Vector::Type::MouseWheel:
@@ -108,7 +108,7 @@ namespace raylib {
 		return out;
 	}
 
-	void Action::pump_multi_button(std::string_view name) {
+	void Action::PumpMultiButton(std::string_view name) {
 		Vector2 state = data.multi.last_state;
 		{
 			auto type = data.multi.type;
@@ -131,20 +131,23 @@ namespace raylib {
 		}
 	}
 
+	void Action::PumpMessages(std::string_view name) {
+		switch(type){
+		break; case Action::Type::Button:
+			PumpButton(name);
+		break; case Action::Type::Axis:
+			PumpAxis(name);
+		break; case Action::Type::Vector:
+			PumpVector(name);
+		break; case Action::Type::MultiButton:
+			PumpMultiButton(name);
+		break; default: assert(type != Action::Type::Invalid);
+		}
+	}
+
 	void BufferedInput::PumpMessages(bool whileUnfocused /*= false*/) {
 		if(!whileUnfocused && !IsWindowFocused()) return;
-		for(auto& [name, action]: actions) {
-			switch(action.type){
-			break; case Action::Type::Button:
-				action.pump_button(name);
-			break; case Action::Type::Axis:
-				action.pump_axis(name);
-			break; case Action::Type::Vector:
-				action.pump_vector(name);
-			break; case Action::Type::MultiButton:
-				action.pump_multi_button(name);
-			break; default: assert(action.type != Action::Type::Invalid);
-			}
-		}
+		for(auto& [name, action]: actions)
+			action.PumpMessages(name);
 	}
 }

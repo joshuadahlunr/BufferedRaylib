@@ -234,73 +234,73 @@ namespace raylib {
 		Action& operator=(Action&& o);
 
 		// Member functions to add and set callback functions for the action (vector overloads).
-		Action& add_callback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
+		Action& AddCallback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
 			this->callback.connect(callback);
 			return *this;
 		}
-		Action& set_callback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
+		Action& SetCallback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return add_callback(callback);
+			return AddCallback(callback);
 		}
 
 		// Member functions to add and set callback functions for the action (float overloads).
-		Action& add_callback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
-			return add_callback(
+		Action& AddCallback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+			return AddCallback(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					callback(name, state.x, delta.x);
 				});
 		}
-		Action& set_callback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+		Action& SetCallback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return add_callback(callback);
+			return AddCallback(callback);
 		}
 
 		// Member functions to add and set callback functions for the action (button pressed overloads).
-		Action& add_pressed_callback_named(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
-			return add_callback(
+		Action& AddPressedCallbackNamed(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
+			return AddCallback(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(state.x) callback(name);
 				});
 		}
-		Action& set_pressed_callback_named(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
+		Action& SetPressedCallbackNamed(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return add_pressed_callback_named(callback);
+			return AddPressedCallbackNamed(callback);
 		}
-		Action& add_pressed_callback(is::signals::signal<void()>::slot_type callback) {
-			return add_callback(
+		Action& AddPressedCallback(is::signals::signal<void()>::slot_type callback) {
+			return AddCallback(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(state.x) callback();
 				});
 		}
-		Action& set_pressed_callback(is::signals::signal<void()>::slot_type callback) {
+		Action& SetPressedCallback(is::signals::signal<void()>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return add_pressed_callback(callback);
+			return AddPressedCallback(callback);
 		}
 		// Member functions to add and set callback functions for the action (button released overloads).
-		Action& add_released_callback_named(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
-			return add_callback(
+		Action& AddReleasedCallbackNamed(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
+			return AddCallback(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(!state.x) callback(name);
 				});
 		}
-		Action& set_released_callback_named(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
+		Action& SetReleasedCallbackNamed(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return add_released_callback_named(callback);
+			return AddReleasedCallbackNamed(callback);
 		}
-		Action& add_released_callback(is::signals::signal<void()>::slot_type callback) {
-			return add_callback(
+		Action& AddReleasedCallback(is::signals::signal<void()>::slot_type callback) {
+			return AddCallback(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(!state.x) callback();
 				});
 		}
-		Action& set_released_callback(is::signals::signal<void()>::slot_type callback) {
+		Action& SetReleasedCallback(is::signals::signal<void()>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return add_released_callback(callback);
+			return AddReleasedCallback(callback);
 		}
 
 		/**
@@ -522,17 +522,25 @@ namespace raylib {
 		 *
 		 * @return Action&& moveable reference to the action
 		 */
+		Action&& Move() { return std::move(*this); }
 		Action&& move() { return std::move(*this); }
 
+		/**
+		 * @brief Function which updates the state of the action and invokes the callback if a change occured.
+		 * @note Automatically called by BufferedInput so there usually isn't a need to manually call this function!
+		 * 
+		 * @param name the name of this action to pass through to the callback
+		 */
+		void PumpMessages(std::string_view name);
 
 	protected:
 		friend struct BufferedInput;
 
 		// Functions which get called by BufferedInput to process actions
-		void pump_button(std::string_view name);
-		void pump_axis(std::string_view name);
-		void pump_vector(std::string_view name);
-		void pump_multi_button(std::string_view name);
+		void PumpButton(std::string_view name);
+		void PumpAxis(std::string_view name);
+		void PumpVector(std::string_view name);
+		void PumpMultiButton(std::string_view name);
 	};
 
 
