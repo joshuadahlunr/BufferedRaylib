@@ -111,14 +111,19 @@ namespace raylib {
 	void Action::pump_multi_button(std::string_view name) {
 		Vector2 state = data.multi.last_state;
 		{
+			auto type = data.multi.type;
 			std::array<uint8_t, 4> buttonState;
-			for(uint8_t i = 0; i < 4; i++) {
+			for(uint8_t i = 0; i < (type == Data::MultiButton::Type::QuadButtons ? 4 : 2); i++) {
 				buttonState[i] = Button::IsSetPressed(data.multi.quadButtons->directions[i]);
 				if(data.multi.quadButtons->normalize && buttonState[i] > 0)
 					buttonState[i] = 1;
 			}
-			state.x = buttonState[MultiButtonData<4>::Direction::Left] - buttonState[MultiButtonData<4>::Direction::Right];
+			if(type == Data::MultiButton::Type::QuadButtons)
+				state.x = buttonState[MultiButtonData<4>::Direction::Left] - buttonState[MultiButtonData<4>::Direction::Right];
 			state.y = buttonState[MultiButtonData<4>::Direction::Up] - buttonState[MultiButtonData<4>::Direction::Down];
+
+			if(type == Data::MultiButton::Type::ButtonPair)
+				state.x = state.y;
 		}
 		if (!Vector2Equals(state, data.multi.last_state)) {
 			callback(name, state, Vector2Subtract(state, data.multi.last_state));

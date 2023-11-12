@@ -197,7 +197,6 @@ namespace raylib {
 					MousePosition,
 					// MouseDelta,
 					GamepadAxes,
-					// QuadButtons,
 				} type;
 
 				struct GamepadAxes{
@@ -208,6 +207,12 @@ namespace raylib {
 			} vector;
 
 			struct MultiButton {
+				enum class Type {
+					Invalid = 0,
+					ButtonPair,
+					QuadButtons,
+				} type;
+
 				MultiButtonData<4>* quadButtons;
 				Vector2 last_state;
 			} multi;
@@ -383,7 +388,7 @@ namespace raylib {
 
 		/**
 		 * @brief Action that is invoked whenever the gamepad axis (usually triggers) is de/pressed.
-		 * Callback signature: [](const std::string_view name, Vector2 value, Vector2 delta) -> void
+		 * Callback signature: [](const std::string_view name, float value, float delta) -> void
 		 *
 		 * @param axis the id of axis to listen for
 		 * @param gamepad id of the gamepad to listen for (default 0)
@@ -395,12 +400,43 @@ namespace raylib {
 
 		/**
 		 * @brief Action that is invoked whenever the mouse wheel is adjusted.
-		 * Callback signature: [](const std::string_view name, Vector2 value, Vector2 delta) -> void
+		 * Callback signature: [](const std::string_view name, float value, float delta) -> void
 		 *
 		 * @return Action
 		 */
 		static Action mouse_wheel() {
 			return {Action::Type::Axis, {.axis = { Data::Axis::Type::MouseWheel }}};
+		}
+
+		/**
+		 * @brief Action that combines button sets pointing in 2 opposing directions into a signed value which represents the direction of the currently pressed buttons.
+		 * Callback signature: [](const std::string_view name, float dir, float delta) -> void
+		 *
+		 * @param positive set of keys to represent the positive direction
+		 * @param negative set of keys to represent the negative direction
+		 * @param normalized normally if there is more than one button in a set, the value will grow to reflect how many buttons are pushed. 
+		 * 	While true the absolute value will never excede 1.
+		 * @return Action
+		 */
+		static Action button_axis(ButtonSet positive, ButtonSet negative, bool normalize = true) {
+			Action out{Action::Type::MultiButton};
+			out.data.multi.type = Data::MultiButton::Type::ButtonPair;
+			out.data.multi.quadButtons = new MultiButtonData<4>{{ positive, negative }, {}, normalize};
+			return out;
+		}
+
+		/**
+		 * @brief Action that combines button sets pointing in 2 opposing directions into a signed value which represents the direction of the currently pressed buttons.
+		 * Callback signature: [](const std::string_view name, float dir, float delta) -> void
+		 *
+		 * @param left set of keys to represent left (negative) axis
+		 * @param right set of keys to represent right (positive) axis
+		 * @param normalized normally if there is more than one button in a set, the value will grow to reflect how many buttons are pushed. 
+		 * 	While true the absolute value will never excede 1.
+		 * @return Action
+		 */
+		static Action button_pair(ButtonSet left, ButtonSet right, bool normalize = true) {
+			return button_axis(left, right, normalize);
 		}
 
 		/**
@@ -444,11 +480,14 @@ namespace raylib {
 		 * @param down set of keys to represent down (-y) axis
 		 * @param left set of keys to represent left (-x) axis
 		 * @param right set of keys to represent right (+x) axis
-		 * @param normalized when true the resulting vector is normalized so that it always has a length of one (default true)
+		 * @param normalized normally if there is more than one button in a set, the vector's length will grow to reflect how many buttons are pushed. 
+		 * 	While true none of the vector's axis will ever excede 1.
+		 * @note The resulting vector itself will not be normalized! If you need it to have a length of 1 you will be on your own...
 		 * @return Action
 		 */
 		static Action quad(ButtonSet up, ButtonSet down, ButtonSet left, ButtonSet right, bool normalized = true) {
 			Action out{Action::Type::MultiButton};
+			out.data.multi.type = Data::MultiButton::Type::QuadButtons;
 			out.data.multi.quadButtons = new MultiButtonData<4>{{ up, down, left, right }, {}, normalized};
 			return out;
 		}
