@@ -131,7 +131,7 @@ namespace raylib {
 		}
 	}
 
-	void Action::PumpMessages(std::string_view name) {
+	void Action::PollEvents(std::string_view name) {
 		switch(type){
 		break; case Action::Type::Button:
 			PumpButton(name);
@@ -145,9 +145,9 @@ namespace raylib {
 		}
 	}
 
-	void BufferedInput::PumpMessages(bool whileUnfocused /*= false*/) {
+	void BufferedInput::PollEvents(bool whileUnfocused /*= false*/) {
 		if(!whileUnfocused && !IsWindowFocused()) return;
 		for(auto& [name, action]: actions)
-			action.PumpMessages(name);
+			action.PollEvents(name);
 	}
 }

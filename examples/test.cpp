@@ -53,13 +53,13 @@ int main(void) {
         // Add the action to a BufferedInput so that it can be automatically pumped
         input.actions["shoot"] = std::move(a); // NOTE: Actions are move only!
     }
-    // It is also possible to extract the last state (as calculated last time BufferedInput.PumpMessages was called)
+    // It is also possible to extract the last state (as calculated last time BufferedInput.PollEvents was called)
     std::cout << (bool)input.actions["shoot"].data.button.last_state << std::endl;
 
     // Main game loop
     while (!WindowShouldClose()) {    // Detect window close button or ESC key
         // Processing and callback invocation occur whenever messages are pumped
-        input.PumpMessages();
+        input.PollEvents();
 
         // NOTE: Be careful to access the correct union alternative when extracting the last state
         std::cout << (bool)input.actions["shoot"].data.button.last_state << std::endl;

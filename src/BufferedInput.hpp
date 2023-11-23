@@ -531,7 +531,7 @@ namespace raylib {
 		 * 
 		 * @param name the name of this action to pass through to the callback
 		 */
-		void PumpMessages(std::string_view name);
+		void PollEvents(std::string_view name);
 
 	protected:
 		friend struct BufferedInput;
@@ -557,7 +557,7 @@ namespace raylib {
 		}
 
 		// Function which updates the state of all actions in the `actions` map.
-		void PumpMessages(bool whileUnfocused = false);
+		void PollEvents(bool whileUnfocused = false);
 	};
 
 }
