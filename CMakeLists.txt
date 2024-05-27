@@ -22,7 +22,7 @@ endif()
 set(BUILD_TESTING false)
 add_subdirectory(FastSignals)
 
-add_library(buffered-raylib src/BufferedInput.hpp src/BufferedInput.cpp)
+add_library(buffered-raylib src/BufferedRaylib.hpp src/BufferedRaylib.cpp)
 target_include_directories(buffered-raylib PUBLIC src)
 target_link_libraries(buffered-raylib PUBLIC raylib libfastsignals)
 

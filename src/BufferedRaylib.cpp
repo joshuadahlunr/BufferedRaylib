@@ -1,4 +1,4 @@
-#include "BufferedInput.hpp"
+#include "BufferedRaylib.hpp"
 
 #include "raymath.h"
 
