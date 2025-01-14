@@ -26,14 +26,14 @@ int main(void) {
 
     // Create a movement action which creates a vector pointing in a direction based on which combination of the wasd key are pressed
     input.actions["move"] = raylib::Action::wasd()
-        .SetCallback([&ballPosition](const std::string_view name, Vector2 dir, Vector2 delta) {
+        .SetCallback([&ballPosition](Vector2 dir, Vector2 delta) {
             // Whenever the set of pressed keys changes, move the ball based on the pressed set
             ballPosition = Vector2Add(Vector2Scale(Vector2Normalize(dir), -10), ballPosition);
             std::cout << "{" << dir.x << ", " << dir.y << "} - {" << delta.x << ", " << delta.y << "}" << std::endl;
         }).move();
 
     // Create a mouse action which creates a vector representing the position of the mouse
-    input.actions["mouse"] = raylib::Action::mouse_position().SetCallback([](const std::string_view name, Vector2 pos, Vector2 delta){
+    input.actions["mouse"] = raylib::Action::mouse_position().SetCallback([](Vector2 pos, Vector2 delta){
         // Calculate the relative mouse movement using the base raylib function
         auto rlDelta = GetMouseDelta();
         // Print the mouse's position and its relative movement using both calculation methods (second and third pairs of numbers should be the same)
@@ -46,7 +46,7 @@ int main(void) {
         auto a = raylib::Action::mouse_button(MOUSE_BUTTON_LEFT);
         // Add a callback to be invoked when the mouse button is pressed (multiple callbacks can be added to a single action)
         // (the same callback can also listen to multiple actions in which case the name of the action passed as the first argument to the callback becomes important)
-        a.AddCallback([](const std::string_view name, uint8_t pressed, bool wasPressed){
+        a.AddCallback([](uint8_t pressed, bool wasPressed){
             // If this is a press and not a release, print a message!
             if(!wasPressed) std::cout << "Bang!" << std::endl;
         });

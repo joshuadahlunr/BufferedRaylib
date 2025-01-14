@@ -234,31 +234,53 @@ namespace raylib {
 		Action& operator=(Action&& o);
 
 		// Member functions to add and set callback functions for the action (vector overloads).
-		Action& AddCallback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
+		Action& AddCallbackNamed(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
 			this->callback.connect(callback);
 			return *this;
 		}
-		Action& SetCallback(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
+		Action& SetCallbackNamed(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return AddCallback(callback);
+			return AddCallbackNamed(callback);
+		}
+		Action& AddCallback(is::signals::signal<void(Vector2 state, Vector2 delta)>::slot_type callback) {
+			return AddCallbackNamed((is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
+				[callback = std::move(callback)](const std::string_view name, Vector2 state, Vector2 delta){
+					callback(state, delta);
+				});
+		}
+		Action& SetCallback(is::signals::signal<void(Vector2 state, Vector2 delta)>::slot_type callback) {
+			return SetCallbackNamed((is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
+				[callback = std::move(callback)](const std::string_view name, Vector2 state, Vector2 delta){
+					callback(state, delta);
+				});
 		}
 
 		// Member functions to add and set callback functions for the action (float overloads).
-		Action& AddCallback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
-			return AddCallback(
+		Action& AddCallbackNamed(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+			return AddCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					callback(name, state.x, delta.x);
 				});
 		}
-		Action& SetCallback(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+		Action& SetCallbackNamed(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return AddCallback(callback);
+			return AddCallbackNamed(callback);
+		}
+		Action& AddCallback(is::signals::signal<void(float state, float delta)>::slot_type callback) {
+			return AddCallbackNamed([callback = std::move(callback)](const std::string_view name, float state, float delta){
+				callback(state, delta);
+			});
+		}
+		Action& SetCallback(is::signals::signal<void(float state, float delta)>::slot_type callback) {
+			return SetCallbackNamed([callback = std::move(callback)](const std::string_view name, float state, float delta){
+				callback(state, delta);
+			});
 		}
 
 		// Member functions to add and set callback functions for the action (button pressed overloads).
 		Action& AddPressedCallbackNamed(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
-			return AddCallback(
+			return AddCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(state.x) callback(name);
@@ -269,7 +291,7 @@ namespace raylib {
 			return AddPressedCallbackNamed(callback);
 		}
 		Action& AddPressedCallback(is::signals::signal<void()>::slot_type callback) {
-			return AddCallback(
+			return AddCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(state.x) callback();
@@ -281,7 +303,7 @@ namespace raylib {
 		}
 		// Member functions to add and set callback functions for the action (button released overloads).
 		Action& AddReleasedCallbackNamed(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
-			return AddCallback(
+			return AddCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(!state.x) callback(name);
@@ -292,7 +314,7 @@ namespace raylib {
 			return AddReleasedCallbackNamed(callback);
 		}
 		Action& AddReleasedCallback(is::signals::signal<void()>::slot_type callback) {
-			return AddCallback(
+			return AddCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(!state.x) callback();
