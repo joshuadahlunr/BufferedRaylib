@@ -5,6 +5,18 @@ set(CXX_STANDARD 20 REQUIRED)
 
 option(BUFFERED_RAYLIB_BUILD_TESTS "Weather or not buffered raylib should build tests" false)
 
+if(MSVC)
+    set(WRONG_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/FastSignals/libfastsignals/include/signal.h")
+    file(READ "${WRONG_HEADER}" HEADER_CONTENTS)
+    string(REPLACE
+        "#	include \"msvc_autolink.h\""
+        "// #include \"msvc_autolink.h\""
+        NEW_HEADER_CONTENTS "${HEADER_CONTENTS}"
+    )
+    message("${NEW_HEADER_CONTENTS}")
+    file(WRITE "${WRONG_HEADER}" "${NEW_HEADER_CONTENTS}")
+endif()
+
 # raylib
 if(TARGET raylib)
 	message("Raylib Found! No need to fetch!")

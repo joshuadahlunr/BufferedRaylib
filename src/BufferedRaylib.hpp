@@ -78,51 +78,51 @@ namespace raylib {
 		// Static helper functions to create Button objects for different input types.
 		/**
 		 * @brief Creates a button associated with a keyboard key
-		 * 
+		 *
 		 * @param key the key
-		 * @return Button 
+		 * @return Button
 		 */
 		static Button key(KeyboardKey key) { return { Type::Keyboard, key}; }
 
 		/**
 		 * @brief Creates a button associated with a mouse buttion
-		 * 
+		 *
 		 * @param button the button
-		 * @return Button 
+		 * @return Button
 		 */
 		static Button btn(MouseButton button) { return { Type::Mouse, {.mouse = button}}; }
 		/**
 		 * @brief Creates a button associated with a mouse buttion
-		 * 
+		 *
 		 * @param button the button
-		 * @return Button 
+		 * @return Button
 		 * @note The same as btn
 		 */
 		static Button mouse_button(MouseButton button) { return btn(button); }
 
 		/**
 		 * @brief Creates a button associated with a gamepad buttion
-		 * 
+		 *
 		 * @param button the button
 		 * @param gamrpad the gamepad the button is associated with (default 0)
-		 * @return Button 
+		 * @return Button
 		 */
 		static Button pad(GamepadButton button, int gamepad = 0) { return { Type::Keyboard, {.gamepad = {gamepad, button}}}; }
 		/**
 		 * @brief Creates a button associated with a gamepad buttion
-		 * 
+		 *
 		 * @param button the button
 		 * @param gamrpad the gamepad the button is associated with (default 0)
-		 * @return Button 
+		 * @return Button
 		 * @note same as joy
 		 */
 		static Button joy(GamepadButton button, int gamepad = 0) { return pad(button, gamepad); }
 		/**
 		 * @brief Creates a button associated with a gamepad buttion
-		 * 
+		 *
 		 * @param button the button
 		 * @param gamrpad the gamepad the button is associated with (default 0)
-		 * @return Button 
+		 * @return Button
 		 * @note same as joy
 		 */
 		static Button gamepad_button(GamepadButton button, int gamepad = 0) { return pad(button, gamepad); }
@@ -170,7 +170,7 @@ namespace raylib {
 
 		// Union to store different types of action data.
 		// NOTE: It is recommended that you don't try to mess with these values yourself, instead use one of the factory functions below
-		// NOTE: Every inner type has a variable called last_state which holds the state as of the last time this action was pumped! 
+		// NOTE: Every inner type has a variable called last_state which holds the state as of the last time this action was pumped!
 		//	Can be quired externally if nessicary... but ensure that you are accessing data of the correct type!
 		union Data {
 			struct Button {
@@ -234,53 +234,67 @@ namespace raylib {
 		Action& operator=(Action&& o);
 
 		// Member functions to add and set callback functions for the action (vector overloads).
-		Action& AddCallbackNamed(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
+		Action& AddVectorCallbackNamed(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
 			this->callback.connect(callback);
 			return *this;
 		}
-		Action& SetCallbackNamed(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
+		Action& SetVectorCallbackNamed(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return AddCallbackNamed(callback);
+			return AddVectorCallbackNamed(callback);
 		}
-		Action& AddCallback(is::signals::signal<void(Vector2 state, Vector2 delta)>::slot_type callback) {
-			return AddCallbackNamed((is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
+		Action& AddVectorCallback(is::signals::signal<void(Vector2 state, Vector2 delta)>::slot_type callback) {
+			return AddVectorCallbackNamed((is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback = std::move(callback)](const std::string_view name, Vector2 state, Vector2 delta){
 					callback(state, delta);
 				});
 		}
-		Action& SetCallback(is::signals::signal<void(Vector2 state, Vector2 delta)>::slot_type callback) {
-			return SetCallbackNamed((is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
+		Action& SetVectorCallback(is::signals::signal<void(Vector2 state, Vector2 delta)>::slot_type callback) {
+			return SetVectorCallbackNamed((is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback = std::move(callback)](const std::string_view name, Vector2 state, Vector2 delta){
 					callback(state, delta);
 				});
 		}
 
 		// Member functions to add and set callback functions for the action (float overloads).
-		Action& AddCallbackNamed(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
-			return AddCallbackNamed(
+		Action& AddFloatCallbackNamed(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+			return AddVectorCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					callback(name, state.x, delta.x);
 				});
 		}
-		Action& SetCallbackNamed(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+		Action& SetFloatCallbackNamed(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
 			this->callback.disconnect_all_slots();
-			return AddCallbackNamed(callback);
+			return AddFloatCallbackNamed(callback);
 		}
-		Action& AddCallback(is::signals::signal<void(float state, float delta)>::slot_type callback) {
-			return AddCallbackNamed([callback = std::move(callback)](const std::string_view name, float state, float delta){
+		Action& AddFloatCallback(is::signals::signal<void(float state, float delta)>::slot_type callback) {
+			return AddFloatCallbackNamed([callback = std::move(callback)](const std::string_view name, float state, float delta){
 				callback(state, delta);
 			});
 		}
-		Action& SetCallback(is::signals::signal<void(float state, float delta)>::slot_type callback) {
-			return SetCallbackNamed([callback = std::move(callback)](const std::string_view name, float state, float delta){
+		Action& SetFloatCallback(is::signals::signal<void(float state, float delta)>::slot_type callback) {
+			return SetFloatCallbackNamed([callback = std::move(callback)](const std::string_view name, float state, float delta){
 				callback(state, delta);
 			});
 		}
 
+        // Aliases for backwards compatibility
+        Action& AddCallbackNamed(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+            return AddFloatCallbackNamed(callback);
+        }
+        Action& SetCallbackNamed(is::signals::signal<void(const std::string_view name, float state, float delta)>::slot_type callback) {
+            return SetFloatCallbackNamed(callback);
+        }
+        Action& AddCallback(is::signals::signal<void(float state, float delta)>::slot_type callback) {
+            return AddFloatCallback(callback);
+        }
+        Action& SetCallback(is::signals::signal<void(float state, float delta)>::slot_type callback) {
+            return SetFloatCallback(callback);
+        }
+
 		// Member functions to add and set callback functions for the action (button pressed overloads).
 		Action& AddPressedCallbackNamed(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
-			return AddCallbackNamed(
+			return AddVectorCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(state.x) callback(name);
@@ -291,7 +305,7 @@ namespace raylib {
 			return AddPressedCallbackNamed(callback);
 		}
 		Action& AddPressedCallback(is::signals::signal<void()>::slot_type callback) {
-			return AddCallbackNamed(
+			return AddVectorCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(state.x) callback();
@@ -303,7 +317,7 @@ namespace raylib {
 		}
 		// Member functions to add and set callback functions for the action (button released overloads).
 		Action& AddReleasedCallbackNamed(is::signals::signal<void(const std::string_view name)>::slot_type callback) {
-			return AddCallbackNamed(
+			return AddVectorCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(!state.x) callback(name);
@@ -314,7 +328,7 @@ namespace raylib {
 			return AddReleasedCallbackNamed(callback);
 		}
 		Action& AddReleasedCallback(is::signals::signal<void()>::slot_type callback) {
-			return AddCallbackNamed(
+			return AddVectorCallbackNamed(
 				(is::signals::signal<void(const std::string_view name, Vector2 state, Vector2 delta)>::slot_type)
 				[callback](const std::string_view name, Vector2 state, Vector2 delta) {
 					if(!state.x) callback();
@@ -436,7 +450,7 @@ namespace raylib {
 		 *
 		 * @param positive set of keys to represent the positive direction
 		 * @param negative set of keys to represent the negative direction
-		 * @param normalized normally if there is more than one button in a set, the value will grow to reflect how many buttons are pushed. 
+		 * @param normalized normally if there is more than one button in a set, the value will grow to reflect how many buttons are pushed.
 		 * 	While true the absolute value will never excede 1.
 		 * @return Action
 		 */
@@ -453,7 +467,7 @@ namespace raylib {
 		 *
 		 * @param left set of keys to represent left (negative) axis
 		 * @param right set of keys to represent right (positive) axis
-		 * @param normalized normally if there is more than one button in a set, the value will grow to reflect how many buttons are pushed. 
+		 * @param normalized normally if there is more than one button in a set, the value will grow to reflect how many buttons are pushed.
 		 * 	While true the absolute value will never excede 1.
 		 * @return Action
 		 */
@@ -502,7 +516,7 @@ namespace raylib {
 		 * @param down set of keys to represent down (-y) axis
 		 * @param left set of keys to represent left (-x) axis
 		 * @param right set of keys to represent right (+x) axis
-		 * @param normalized normally if there is more than one button in a set, the vector's length will grow to reflect how many buttons are pushed. 
+		 * @param normalized normally if there is more than one button in a set, the vector's length will grow to reflect how many buttons are pushed.
 		 * 	While true none of the vector's axis will ever excede 1.
 		 * @note The resulting vector itself will not be normalized! If you need it to have a length of 1 you will be on your own...
 		 * @return Action
@@ -550,7 +564,7 @@ namespace raylib {
 		/**
 		 * @brief Function which updates the state of the action and invokes the callback if a change occured.
 		 * @note Automatically called by BufferedInput so there usually isn't a need to manually call this function!
-		 * 
+		 *
 		 * @param name the name of this action to pass through to the callback
 		 */
 		void PollEvents(std::string_view name);
